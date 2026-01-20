@@ -1,0 +1,18 @@
+int x = 20
+int y = 5
+double pi = 3.14
+bool ok = true
+char c = 'A'
+string s = "Hello World"
+int a[10]
+double b[]
+string names[3]
+
+Start{
+	x = (x + 50) / 5
+    print(x)
+}
+
+Update{
+    print(y)
+}
