@@ -1,6 +1,4 @@
-#ifndef _WIN32_WINNT
 #define _WIN32_WINNT 0x0601
-#endif
 #include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,12 +6,53 @@
 #include "quad.h"
 #include "vm.h"
 #include "parser.tab.h"
+#include "ConsolePix.h"
+
+#define WIDTH  400
+#define HEIGHT 400
+#define PIXEL  2
+#define CIRCLE_RADIUS 20
 
 extern FILE* yyin;
 const char* g_filename;
 
 int main(int argc, char* argv[]) {
-    //MessageBoxA(NULL, "Program is running", "cpix", MB_OK);
+
+    if (!ConsolePix_EnsureConhost()) return 0;
+
+    // === Child instance (now hosted by conhost) ===
+    SetConsoleTitleA("My Console");
+
+    if (!ConstructConsole(WIDTH, HEIGHT, PIXEL, PIXEL, 23)) {
+        printf("ConstructConsole failed.\n");
+        system("pause");
+        return 1;
+    }
+
+    char titleBuffer[128];
+    for (;;) {
+        BeginFrame();
+
+        Fill(0, 0, WIDTH, HEIGHT, 0x0000);
+        FillCircle(GetMouseX(), GetMouseY(), CIRCLE_RADIUS, 0x0004);
+
+        WriteStringScaled(10,10,0x00FF,1,"Himaron");
+        WriteStringScaled(10,40,0x00FF,2,"Himaron");
+        WriteStringScaled(10,80,0x00FF,3,"Himaron");
+        WriteStringScaled(10,150,0x00FF,4,"Himaron");
+
+        if (GetKey(VK_ESCAPE)->bPressed) break;
+
+        EndFrame(1);
+
+        double fps = GetFPS();
+        snprintf(titleBuffer, sizeof(titleBuffer), "FPS: %.2f", fps);
+        UpdateTitle(titleBuffer);
+    }
+
+    CleanupConsole();
+    system("pause");
+    return 0;
     if (argc != 2) {
         fprintf(stderr, "Usage: cpix <file.Cpix>\n");
         return 1;
@@ -49,25 +88,3 @@ int main(int argc, char* argv[]) {
     return result;
 }
 
-static void attach_console(void)
-{
-    if (!GetConsoleWindow()) AllocConsole();
-    freopen("CONIN$",  "r", stdin);
-    freopen("CONOUT$", "w", stdout);
-    freopen("CONOUT$", "w", stderr);
-}
-
-int WINAPI WinMain(HINSTANCE h, HINSTANCE p, LPSTR cmd, int show)
-{
-    (void)h; (void)p; (void)cmd; (void)show;
-
-    attach_console();
-    // Use MinGW globals for argv/argc in a Windows-subsystem app
-    int rc = main(__argc, __argv);
-
-    MessageBoxA(NULL, "Entered WinMain", "cpix", MB_OK);
-
-    // Optional: keep window open so you can read output
-    system("pause");
-    return rc;
-}
