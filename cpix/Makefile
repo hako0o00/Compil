@@ -1,5 +1,7 @@
 CC = gcc
 CFLAGS = -Wall -Wno-unused-function -Isrc
+LDFLAGS = -mwindows -lgdi32
+
 FLEX = flex
 BISON = bison
 
@@ -14,7 +16,9 @@ $(SRCDIR)/parser.c $(SRCDIR)/parser.tab.h: $(SRCDIR)/parser.y
 	$(BISON) -d --defines=$(SRCDIR)/parser.tab.h -o $(SRCDIR)/parser.c $(SRCDIR)/parser.y
 
 cpix: $(SRCDIR)/parser.c $(SRCDIR)/lexer.c
-	$(CC) $(CFLAGS) -o cpix $(SRCDIR)/main.c $(SRCDIR)/quad.c $(SRCDIR)/vm.c $(SRCDIR)/lexer.c $(SRCDIR)/parser.c
+	$(CC) $(CFLAGS) -o cpix \
+		$(SRCDIR)/main.c $(SRCDIR)/quad.c $(SRCDIR)/vm.c $(SRCDIR)/lexer.c $(SRCDIR)/parser.c \
+		$(LDFLAGS)
 
 run: cpix
 	./cpix tests/hello.Cpix

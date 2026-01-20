@@ -1,3 +1,7 @@
+#ifndef _WIN32_WINNT
+#define _WIN32_WINNT 0x0601
+#endif
+#include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -9,6 +13,7 @@ extern FILE* yyin;
 const char* g_filename;
 
 int main(int argc, char* argv[]) {
+    //MessageBoxA(NULL, "Program is running", "cpix", MB_OK);
     if (argc != 2) {
         fprintf(stderr, "Usage: cpix <file.Cpix>\n");
         return 1;
@@ -42,4 +47,27 @@ int main(int argc, char* argv[]) {
 
     int result = vm_run();
     return result;
+}
+
+static void attach_console(void)
+{
+    if (!GetConsoleWindow()) AllocConsole();
+    freopen("CONIN$",  "r", stdin);
+    freopen("CONOUT$", "w", stdout);
+    freopen("CONOUT$", "w", stderr);
+}
+
+int WINAPI WinMain(HINSTANCE h, HINSTANCE p, LPSTR cmd, int show)
+{
+    (void)h; (void)p; (void)cmd; (void)show;
+
+    attach_console();
+    // Use MinGW globals for argv/argc in a Windows-subsystem app
+    int rc = main(__argc, __argv);
+
+    MessageBoxA(NULL, "Entered WinMain", "cpix", MB_OK);
+
+    // Optional: keep window open so you can read output
+    system("pause");
+    return rc;
 }
