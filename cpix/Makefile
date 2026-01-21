@@ -2,8 +2,8 @@ CC = gcc
 CFLAGS = -Wall -Wno-unused-function -Isrc
 
 
-FLEX = flex
-BISON = bison
+FLEX = win_flex
+BISON = win_bison
 
 SRCDIR = src
 

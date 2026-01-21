@@ -7,12 +7,10 @@ string s = "Hello World"
 int a[10]
 double b[]
 string names[3]
-
 Start{
 	x = (x + 50) / 5
     print(x)
 }
-
 Update{
     print(y)
 }

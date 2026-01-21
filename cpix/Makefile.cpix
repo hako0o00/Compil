@@ -1,0 +1,76 @@
+# Makefile pour l'analyseur lexical Cpix
+# Implementation des transformations Regex -> NFA -> DFA pour le langage Cpix
+
+CC = gcc
+CFLAGS = -Wall -Wextra -g -std=c99
+TARGET = cpix_analyzer
+SRC_DIR = src
+BUILD_DIR = build
+
+# Fichiers sources
+SOURCES = $(SRC_DIR)/cpix_lexical_analyzer.c $(SRC_DIR)/main_cpix_analyzer.c
+OBJECTS = $(BUILD_DIR)/cpix_lexical_analyzer.o $(BUILD_DIR)/main_cpix_analyzer.o
+HEADERS = $(SRC_DIR)/cpix_lexical_analyzer.h
+
+# Regle par defaut
+all: $(BUILD_DIR) $(TARGET)
+
+# Creation du repertoire build
+$(BUILD_DIR):
+	@cmd /c "if not exist $(BUILD_DIR) mkdir $(BUILD_DIR)"
+
+# Compilation du programme principal
+$(TARGET): $(OBJECTS)
+	$(CC) $(CFLAGS) -o $@ $^
+	@echo.
+	@echo ================================================================================
+	@echo Analyseur lexical Cpix compile avec succes: $(TARGET).exe
+	@echo ================================================================================
+	@echo.
+
+# Compilation des fichiers objets
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c $(HEADERS)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Nettoyage
+clean:
+	@cmd /c "if exist $(BUILD_DIR) rmdir /s /q $(BUILD_DIR)"
+	@cmd /c "if exist $(TARGET).exe del /q $(TARGET).exe"
+	@echo Nettoyage termine.
+
+# Execution
+run: all
+	@echo.
+	@echo ================================================================================
+	@echo Execution de l'analyseur lexical Cpix...
+	@echo ================================================================================
+	@.\$(TARGET).exe
+
+# Test avec le fichier d'exemple
+test: all
+	@echo.
+	@echo ================================================================================
+	@echo Test avec le fichier hello.Cpix...
+	@echo ================================================================================
+	@echo Code Cpix d'exemple:
+	@type tests\hello.Cpix
+	@echo.
+	@echo ================================================================================
+	@.\$(TARGET).exe
+
+# Aide
+help:
+	@echo.
+	@echo ================================================================================
+	@echo Makefile pour l'analyseur lexical Cpix
+	@echo ================================================================================
+	@echo.
+	@echo Commandes disponibles:
+	@echo   make        ou  make all   : Compiler le programme
+	@echo   make run                   : Compiler et executer
+	@echo   make test                  : Afficher le code d'exemple et executer
+	@echo   make clean                 : Nettoyer les fichiers generes
+	@echo   make help                  : Afficher cette aide
+	@echo.
+
+.PHONY: all clean run test help
