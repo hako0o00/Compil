@@ -5,6 +5,7 @@
 #include <errno.h>
 #include "vm.h"
 #include "quad.h"
+#include "ConsolePix.h"
 
 typedef enum { V_UNDEF, V_INT, V_DBL, V_STR, V_CHAR, V_ARR } vkind_t;
 
@@ -237,99 +238,100 @@ static void ensure_array(const char* name, int n) {
 }
 
 int vm_run(void) {
-    int count = quad_count();
+    FillCircle(200,200,50,0x00FF);
+    // int count = quad_count();
 
-    for (int i = 0; i < count; i++) {
-        quad_t* q = quad_at(i);
+    // for (int i = 0; i < count; i++) {
+    //     quad_t* q = quad_at(i);
 
-        switch (q->op) {
-        case Q_DECL: {
-            /* q->a1 = name, q->a2 = type (maybe with [N]) */
-            int sz = parse_array_size(q->a2 ? q->a2 : "");
-            if (sz != 0) ensure_array(q->a1, sz);
-            else env_ensure(q->a1);
-            break;
-        }
+    //     switch (q->op) {
+    //     case Q_DECL: {
+    //         /* q->a1 = name, q->a2 = type (maybe with [N]) */
+    //         int sz = parse_array_size(q->a2 ? q->a2 : "");
+    //         if (sz != 0) ensure_array(q->a1, sz);
+    //         else env_ensure(q->a1);
+    //         break;
+    //     }
 
-        case Q_ASSIGN: {
-            value_t rhs = eval_operand(q->a2);
-            if (rhs.kind == V_UNDEF) {
-                fprintf(stderr, "runtime error: undefined value in ASSIGN (%s = %s)\n", q->a1, q->a2);
-                return 1;
-            }
-            store_value(q->a1, rhs);
-            break;
-        }
+    //     case Q_ASSIGN: {
+    //         value_t rhs = eval_operand(q->a2);
+    //         if (rhs.kind == V_UNDEF) {
+    //             fprintf(stderr, "runtime error: undefined value in ASSIGN (%s = %s)\n", q->a1, q->a2);
+    //             return 1;
+    //         }
+    //         store_value(q->a1, rhs);
+    //         break;
+    //     }
 
-        case Q_PRINT: {
-            value_t v = eval_operand(q->a1);
-            if (v.kind == V_INT) printf("%d\n", v.i);
-            else if (v.kind == V_DBL) printf("%g\n", v.d);
-            else if (v.kind == V_STR) printf("%s\n", v.s);
-            else if (v.kind == V_CHAR) printf("%c\n", v.c);
-            else {
-                fprintf(stderr, "runtime error: undefined value in PRINT (%s)\n", q->a1);
-                value_free(&v);
-                return 1;
-            }
-            value_free(&v);
-            break;
-        }
+    //     case Q_PRINT: {
+    //         value_t v = eval_operand(q->a1);
+    //         if (v.kind == V_INT) printf("%d\n", v.i);
+    //         else if (v.kind == V_DBL) printf("%g\n", v.d);
+    //         else if (v.kind == V_STR) printf("%s\n", v.s);
+    //         else if (v.kind == V_CHAR) printf("%c\n", v.c);
+    //         else {
+    //             fprintf(stderr, "runtime error: undefined value in PRINT (%s)\n", q->a1);
+    //             value_free(&v);
+    //             return 1;
+    //         }
+    //         value_free(&v);
+    //         break;
+    //     }
 
-        case Q_UNOP: {
-            value_t a = eval_operand(q->a3);
-            if (a.kind != V_INT) {
-                fprintf(stderr, "runtime error: UNOP expects int\n");
-                value_free(&a);
-                return 1;
-            }
-            if (strcmp(q->a1, "NEG") == 0) {
-                store_value(q->a2, value_int(-a.i));
-            } else {
-                fprintf(stderr, "runtime error: unknown UNOP %s\n", q->a1);
-                value_free(&a);
-                return 1;
-            }
-            value_free(&a);
-            break;
-        }
+    //     case Q_UNOP: {
+    //         value_t a = eval_operand(q->a3);
+    //         if (a.kind != V_INT) {
+    //             fprintf(stderr, "runtime error: UNOP expects int\n");
+    //             value_free(&a);
+    //             return 1;
+    //         }
+    //         if (strcmp(q->a1, "NEG") == 0) {
+    //             store_value(q->a2, value_int(-a.i));
+    //         } else {
+    //             fprintf(stderr, "runtime error: unknown UNOP %s\n", q->a1);
+    //             value_free(&a);
+    //             return 1;
+    //         }
+    //         value_free(&a);
+    //         break;
+    //     }
 
-        case Q_BINOP: {
-            value_t a = eval_operand(q->a3);
-            value_t b = eval_operand(q->a4);
-            if (a.kind != V_INT || b.kind != V_INT) {
-                fprintf(stderr, "runtime error: BINOP expects ints\n");
-                value_free(&a);
-                value_free(&b);
-                return 1;
-            }
-            int r = 0;
-            if (!binop_int(q->a1, a.i, b.i, &r)) {
-                fprintf(stderr, "runtime error: invalid BINOP (%s) or division by zero\n", q->a1);
-                value_free(&a);
-                value_free(&b);
-                return 1;
-            }
-            store_value(q->a2, value_int(r));
-            value_free(&a);
-            value_free(&b);
-            break;
-        }
+    //     case Q_BINOP: {
+    //         value_t a = eval_operand(q->a3);
+    //         value_t b = eval_operand(q->a4);
+    //         if (a.kind != V_INT || b.kind != V_INT) {
+    //             fprintf(stderr, "runtime error: BINOP expects ints\n");
+    //             value_free(&a);
+    //             value_free(&b);
+    //             return 1;
+    //         }
+    //         int r = 0;
+    //         if (!binop_int(q->a1, a.i, b.i, &r)) {
+    //             fprintf(stderr, "runtime error: invalid BINOP (%s) or division by zero\n", q->a1);
+    //             value_free(&a);
+    //             value_free(&b);
+    //             return 1;
+    //         }
+    //         store_value(q->a2, value_int(r));
+    //         value_free(&a);
+    //         value_free(&b);
+    //         break;
+    //     }
 
-        default:
-            fprintf(stderr, "runtime error: unknown quad op\n");
-            return 1;
-        }
-    }
+    //     default:
+    //         fprintf(stderr, "runtime error: unknown quad op\n");
+    //         return 1;
+    //     }
+    // }
 
-    for (int i = 0; i < env_n; i++) {
-        free(env[i].name);
-        value_free(&env[i].v);
-    }
-    free(env);
-    env = NULL;
-    env_n = 0;
-    env_cap = 0;
+    // for (int i = 0; i < env_n; i++) {
+    //     free(env[i].name);
+    //     value_free(&env[i].v);
+    // }
+    // free(env);
+    // env = NULL;
+    // env_n = 0;
+    // env_cap = 0;
 
     return 0;
 }

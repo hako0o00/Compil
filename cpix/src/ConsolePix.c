@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include "ConsolePix.h"
 
-static int drawn = 0;
+// static int drawn = 0;
 
 static sKeyState m_mouse[5];
 static sKeyState m_keys[256];

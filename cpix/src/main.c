@@ -18,6 +18,32 @@ const char* g_filename;
 
 int main(int argc, char* argv[]) {
 
+    // g_filename = argv[1];
+    // FILE* f = fopen(g_filename, "r");
+    // if (!f) {
+    //     fprintf(stderr, "Error: cannot open file '%s'\n", g_filename);
+    // }
+
+    // yyin = f;
+    // quad_reset();
+
+    // if (yyparse() != 0) {
+    //     fclose(f);
+    // }
+
+    // fclose(f);
+
+    // char out_filename[1024];
+    // strcpy(out_filename, g_filename);
+    // strcat(out_filename, ".quads.txt");
+    // FILE* out = fopen(out_filename, "w");
+    // if (out) {
+    //     quad_dump(out);
+    //     fclose(out);
+    // }
+
+    
+
     if (!ConsolePix_EnsureConhost()) return 0;
 
     // === Child instance (now hosted by conhost) ===
@@ -34,6 +60,7 @@ int main(int argc, char* argv[]) {
         BeginFrame();
 
         Fill(0, 0, WIDTH, HEIGHT, 0x0000);
+        vm_run();
         FillCircle(GetMouseX(), GetMouseY(), CIRCLE_RADIUS, 0x0004);
 
         WriteStringScaled(10,10,0x00FF,1,"Himaron");
@@ -58,33 +85,6 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    g_filename = argv[1];
-    FILE* f = fopen(g_filename, "r");
-    if (!f) {
-        fprintf(stderr, "Error: cannot open file '%s'\n", g_filename);
-        return 1;
-    }
 
-    yyin = f;
-    quad_reset();
-
-    if (yyparse() != 0) {
-        fclose(f);
-        return 1;
-    }
-
-    fclose(f);
-
-    char out_filename[1024];
-    strcpy(out_filename, g_filename);
-    strcat(out_filename, ".quads.txt");
-    FILE* out = fopen(out_filename, "w");
-    if (out) {
-        quad_dump(out);
-        fclose(out);
-    }
-
-    int result = vm_run();
-    return result;
 }
 
