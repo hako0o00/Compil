@@ -1,16 +1,109 @@
-int x = 20
-int y = 5
-double pi = 3.14
-bool ok = true
-char c = 'A'
-string s = "Hello World"
-int a[10]
-double b[]
-string names[3]
-Start{
-	x = (x + 50) / 5
-    print(x)
+# ============================================================
+# CPix Full Feature Test
+# - Variables (int/double/bool-like int)
+# - Arithmetic + comparisons + boolean logic
+# - if / else
+# - while + nested loops (grid)
+# - Drawing: Fill, FillCircle, WriteStringScaled
+# - String concatenation with int/double using "+"
+# ============================================================
+
+int frame = 0
+int grid = 5
+int mx = 0
+int my = 0
+
+int i = 0
+int j = 0
+
+int cx = 200
+int cy = 200
+int r  = 18
+
+double t = 0.0
+
+Start {
+  # Simple splash / init drawing
+  Fill(0,0,400,400,0x0014)
+  WriteStringScaled(10,10,0x00FF,2,"CPix test starting...")
+  WriteStringScaled(10,40,0x00FF,1,"grid=" + grid + " r=" + r)
 }
-Update{
-    print(y)
+
+Update {
+
+  # ------------------------------------------------------------
+  # 1) Read mouse
+  # ------------------------------------------------------------
+  mx = GetMouseX()
+  my = GetMouseY()
+  if((mx < 50) && (my<50)){
+
+} else {
+	# ------------------------------------------------------------
+  # 2) Background color changes over time (very simple)
+  #    (we just alternate based on frame parity)
+  # ------------------------------------------------------------
+  if( (frame % 2) == 0 ){
+    Fill(0,0,400,400,0x0001)
+  } else {
+    Fill(0,0,400,400,0x0000)
+  }
+
+  # ------------------------------------------------------------
+  # 3) Draw a grid using nested while loops
+  # ------------------------------------------------------------
+i = 0
+while(i < 10){
+  j = 0
+  while(j < 10){
+
+    # parity based on cell indices (i+j)
+    if( ((i + j) % 2) == 0 ){
+      Fill(i*grid, j*grid, (i+1)*grid, (j+1)*grid, 0x0077)
+    } else {
+      Fill(i*grid, j*grid, (i+1)*grid, (j+1)*grid, 0x0022)
+    }
+
+    j = j + 1
+  }
+  i = i + 1
+}
+  # ------------------------------------------------------------
+  # 4) Circle follows mouse if inside bounds, else stays center
+  #    Demonstrates comparisons + if/else
+  # ------------------------------------------------------------
+  if( (mx >= 0) && (mx < 400) && (my >= 0) && (my < 400) ){
+    cx = mx
+    cy = my
+  } else {
+    cx = 200
+    cy = 200
+  }
+
+  # ------------------------------------------------------------
+  # 5) Draw circle + a second circle that grows/shrinks
+  #    Demonstrates arithmetic + modulo
+  # ------------------------------------------------------------
+  FillCircle(cx, cy, r, 0x0044)
+
+  # pulse radius with frame (range roughly 10..30)
+  FillCircle(320, 80, 10 + (frame % 21), 0x0033)
+
+  # ------------------------------------------------------------
+  # 6) Text overlay using concatenation with int/double
+  # ------------------------------------------------------------
+  WriteStringScaled(10,10,0x0044,1, "frame=" + frame)
+  WriteStringScaled(10,25,0x0044,1, "mx=" + mx + " my=" + my)
+  WriteStringScaled(10,40,0x0044,1, "cx=" + cx + " cy=" + cy + " r=" + r)
+
+  # double test (t accumulates)
+  t = t + 0.05
+  WriteStringScaled(10,55,0x0044,1, "t=" + t)
+
+  # ------------------------------------------------------------
+  # 7) Update frame
+  # ------------------------------------------------------------
+  frame = frame + 1
+}
+  
 }

@@ -7,6 +7,7 @@ static quad_t* quads = NULL;
 static int quad_capacity = 0;
 static int quad_size = 0;
 static int temp_id = 0;
+static int label_id = 0;
 
 static char* qdup(const char* s) {
     if (!s) return NULL;
@@ -45,9 +46,25 @@ void quad_reset(void) {
     free(quads);
     quads = NULL;
     quad_capacity = 0;
+    label_id = 0;
     quad_size = 0;
     temp_id = 0;
 }
+
+void quad_emit_jmp(const char* label) {
+    quad_push(Q_JMP, label, NULL, NULL, NULL);
+}
+
+void quad_emit_jz(const char* cond, const char* label) {
+    quad_push(Q_JZ, cond, label, NULL, NULL);
+}
+
+char* quad_new_label(void) {
+    char buf[32];
+    snprintf(buf, sizeof(buf), "L%d", label_id++);
+    return qdup(buf);
+}
+
 
 void quad_emit_decl(const char* name, const char* type) {
     quad_push(Q_DECL, name, type, NULL, NULL);
@@ -67,6 +84,21 @@ void quad_emit_binop(const char* op, const char* res, const char* a, const char*
 
 void quad_emit_unop(const char* op, const char* res, const char* a) {
     quad_push(Q_UNOP, op, res, a, NULL);
+}
+
+/* new */
+void quad_emit_label(const char* name) {
+    quad_push(Q_LABEL, name, NULL, NULL, NULL);
+}
+
+void quad_emit_param(const char* operand) {
+    quad_push(Q_PARAM, operand, NULL, NULL, NULL);
+}
+
+void quad_emit_calln(const char* funcName, int argc, const char* result_or_null) {
+    char buf[32];
+    snprintf(buf, sizeof(buf), "%d", argc);
+    quad_push(Q_CALLN, funcName, buf, result_or_null, NULL);
 }
 
 char* quad_new_temp(void) {
@@ -103,6 +135,24 @@ void quad_dump(FILE* out) {
         case Q_UNOP:
             fprintf(out, "%d: (UNOP, %s, %s, %s)\n", i, q->a1, q->a2, q->a3);
             break;
+
+        case Q_LABEL:
+            fprintf(out, "%d: (LABEL, %s)\n", i, q->a1);
+            break;
+        case Q_PARAM:
+            fprintf(out, "%d: (PARAM, %s)\n", i, q->a1);
+            break;
+        case Q_CALLN:
+            fprintf(out, "%d: (CALLN, %s, argc=%s, res=%s)\n",
+                    i, q->a1, q->a2 ? q->a2 : "0", q->a3 ? q->a3 : "_");
+            break;
+        case Q_JMP:
+            fprintf(out, "%d: (JMP, %s)\n", i, q->a1);
+            break;
+        case Q_JZ:
+            fprintf(out, "%d: (JZ, %s, %s)\n", i, q->a1, q->a2);
+            break;
+
         default:
             fprintf(out, "%d: (UNKNOWN)\n", i);
             break;
