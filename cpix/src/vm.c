@@ -307,6 +307,82 @@ static int eval_logic_binop(const char* op, value_t a, value_t b, value_t* out) 
 }
 
 /* ---------------- Native functions (minimal set) ---------------- */
+static char* value_to_cstring_alloc(value_t v) {
+    char* out = NULL;
+
+    if (v.kind == V_STR) {
+        size_t n = strlen(v.s) + 1;
+        out = (char*)malloc(n);
+        if (!out) { perror("malloc"); exit(1); }
+        memcpy(out, v.s, n);
+        return out;
+    }
+
+    if (v.kind == V_INT) {
+        int need = snprintf(NULL, 0, "%d", v.i);
+        if (need < 0) return NULL;
+        out = (char*)malloc((size_t)need + 1);
+        if (!out) { perror("malloc"); exit(1); }
+        snprintf(out, (size_t)need + 1, "%d", v.i);
+        return out;
+    }
+
+    if (v.kind == V_DBL) {
+        int need = snprintf(NULL, 0, "%g", v.d);
+        if (need < 0) return NULL;
+        out = (char*)malloc((size_t)need + 1);
+        if (!out) { perror("malloc"); exit(1); }
+        snprintf(out, (size_t)need + 1, "%g", v.d);
+        return out;
+    }
+
+    if (v.kind == V_CHAR) {
+        out = (char*)malloc(2);
+        if (!out) { perror("malloc"); exit(1); }
+        out[0] = v.c;
+        out[1] = '\0';
+        return out;
+    }
+
+    return NULL; /* V_UNDEF or unsupported */
+}
+
+/* If op is ADD and at least one operand is a string, do concatenation.
+   Supports string + int/double/char by converting non-strings to text.
+   Returns 1 on success and writes *out as V_STR.
+*/
+static int eval_concat_add(const char* op, value_t a, value_t b, value_t* out) {
+    if (strcmp(op, "ADD") != 0) return 0;
+
+    /* Only treat ADD as concat if at least one operand is a string */
+    if (a.kind != V_STR && b.kind != V_STR) return 0;
+
+    char* sa = value_to_cstring_alloc(a);
+    char* sb = value_to_cstring_alloc(b);
+    if (!sa || !sb) {
+        free(sa);
+        free(sb);
+        return 0;
+    }
+
+    size_t la = strlen(sa);
+    size_t lb = strlen(sb);
+
+    char* joined = (char*)malloc(la + lb + 1);
+    if (!joined) { perror("malloc"); exit(1); }
+
+    memcpy(joined, sa, la);
+    memcpy(joined + la, sb, lb);
+    joined[la + lb] = '\0';
+
+    free(sa);
+    free(sb);
+
+    /* value_str() duplicates internally, so free joined after */
+    *out = value_str(joined);
+    free(joined);
+    return 1;
+}
 
 typedef value_t (*native_fn_t)(value_t* args, int argc);
 
@@ -578,7 +654,15 @@ int vm_run_block(const char* label) {
             value_t r = {0};
             r.kind = V_UNDEF;
 
-            /* arithmetic */
+            /* 1) CONCAT: if op is ADD and any operand is string => concatenate (supports int/dbl/char too) */
+            if (eval_concat_add(q->a1, a, b, &r)) {
+                store_value(q->a2, r);
+                value_free(&a);
+                value_free(&b);
+                break;
+            }
+
+            /* 2) Arithmetic */
             if (eval_arith_binop(q->a1, a, b, &r)) {
                 store_value(q->a2, r);
                 value_free(&a);
@@ -586,7 +670,7 @@ int vm_run_block(const char* label) {
                 break;
             }
 
-            /* comparisons */
+            /* 3) Comparisons */
             if (eval_cmp_binop(q->a1, a, b, &r)) {
                 store_value(q->a2, r); /* bool as int */
                 value_free(&a);
@@ -594,7 +678,7 @@ int vm_run_block(const char* label) {
                 break;
             }
 
-            /* logic */
+            /* 4) Logic */
             if (eval_logic_binop(q->a1, a, b, &r)) {
                 store_value(q->a2, r); /* bool as int */
                 value_free(&a);
@@ -607,6 +691,7 @@ int vm_run_block(const char* label) {
             value_free(&b);
             return 1;
         }
+
 
         case Q_PARAM: {
             value_t v = eval_operand(q->a1);
