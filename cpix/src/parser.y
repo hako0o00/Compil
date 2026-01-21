@@ -5,7 +5,6 @@
 #include "quad.h"
 
 extern int yylex(void);
-extern int yyparse(void);
 extern FILE* yyin;
 extern int yylineno;
 extern int yycolumn;
@@ -47,9 +46,14 @@ static char* imm_str(const char* s) {
     memcpy(r + 1, s, ln + 1);
     return r;
 }
+
+/* Minimal: only these are allowed to return a value in expressions */
+static int call_has_return(const char* name) {
+    return (strcmp(name, "GetMouseX") == 0) || (strcmp(name, "GetMouseY") == 0);
+}
 %}
 
-%union { char* s; }
+%union { char* s; int i; }
 
 %token <s> STRING
 %token <s> IDENT
@@ -64,15 +68,15 @@ static char* imm_str(const char* s) {
 %token LBRACE RBRACE
 %token LBRACKET RBRACKET
 %token ASSIGN
+%token COMMA
 
 %token TYPE_INT TYPE_DOUBLE TYPE_BOOL TYPE_CHAR TYPE_STRING
 
 %token PLUS MINUS STAR SLASH PERCENT IDIV
 %token LPAREN RPAREN
 
-%type <s> type expr print_arg literal
-%type <s> array_opt
-
+%type <s> type expr print_arg literal array_opt
+%type <i> arglist arglist_opt
 
 %left PLUS MINUS
 %left STAR SLASH PERCENT IDIV
@@ -81,8 +85,9 @@ static char* imm_str(const char* s) {
 %%
 
 program
-    : preamble_opt START LBRACE block_lines RBRACE opt_newlines
-      UPDATE LBRACE block_lines RBRACE opt_newlines
+    : preamble_opt
+      START LBRACE { quad_emit_label("START"); } block_lines RBRACE opt_newlines
+      UPDATE LBRACE { quad_emit_label("UPDATE"); } block_lines RBRACE opt_newlines
     ;
 
 preamble_opt
@@ -128,7 +133,6 @@ declaration
       }
     ;
 
-
 type
     : TYPE_INT    { $$ = xstrdup2("int"); }
     | TYPE_DOUBLE { $$ = xstrdup2("double"); }
@@ -154,14 +158,10 @@ array_opt
       }
     ;
 
-
 literal
-    : INTNUM
-      { $$ = imm_int($1); free($1); }
-    | DBLNUM
-      { $$ = imm_dbl($1); free($1); }
-    | STRING
-      { $$ = imm_str($1); free($1); }
+    : INTNUM    { $$ = imm_int($1); free($1); }
+    | DBLNUM    { $$ = imm_dbl($1); free($1); }
+    | STRING    { $$ = imm_str($1); free($1); }
     | BOOL_LIT
       {
           if (strcmp($1, "true") == 0) $$ = xstrdup2("@1");
@@ -170,8 +170,6 @@ literal
       }
     | CHAR_LIT
       {
-          /* CHAR_LIT is stored without quotes by lexer, like A or \n */
-          /* encode as ^<payload> so VM knows it’s a char immediate */
           size_t ln = strlen($1);
           char* r = (char*)malloc(ln + 2);
           if (!r) { perror("malloc"); exit(1); }
@@ -209,11 +207,16 @@ statement
           free($1);
           free($3);
       }
+    | IDENT LPAREN arglist_opt RPAREN
+      {
+          /* call as statement => void result */
+          quad_emit_calln($1, $3, NULL);
+          free($1);
+      }
     ;
 
 print_arg
-    : STRING
-      { $$ = imm_str($1); free($1); }
+    : STRING   { $$ = imm_str($1); free($1); }
     | BOOL_LIT
       {
           if (strcmp($1, "true") == 0) $$ = xstrdup2("@1");
@@ -230,20 +233,37 @@ print_arg
           $$ = r;
           free($1);
       }
-    | IDENT
-      { $$ = $1; }
-    | expr
-      { $$ = $1; }
+    | IDENT { $$ = $1; }
+    | expr  { $$ = $1; }
+    ;
+
+
+
+arglist_opt
+    : /* empty */ { $$ = 0; }
+    | arglist     { $$ = $1; }
+    ;
+
+arglist
+    : expr
+      {
+          quad_emit_param($1);
+          free($1);
+          $$ = 1;
+      }
+    | arglist COMMA expr
+      {
+          quad_emit_param($3);
+          free($3);
+          $$ = $1 + 1;
+      }
     ;
 
 
 expr
-    : INTNUM
-      { $$ = imm_int($1); free($1); }
-    | IDENT
-      { $$ = $1; }
-    | LPAREN expr RPAREN
-      { $$ = $2; }
+    : INTNUM { $$ = imm_int($1); free($1); }
+    | IDENT  { $$ = $1; }
+    | LPAREN expr RPAREN { $$ = $2; }
     | MINUS expr %prec UMINUS
       {
           char* t = quad_new_temp();
@@ -292,6 +312,38 @@ expr
           quad_emit_binop("MOD", t, $1, $3);
           free($1); free($3);
           $$ = t;
+      }
+    | IDENT LPAREN arglist_opt RPAREN
+      {
+          /* call as expression: only allowed for GetMouseX/GetMouseY */
+          if (!call_has_return($1)) {
+              fprintf(stderr, "File \"%s\", line %d, character %d: '%s' has no return value\n",
+                      g_filename, yylineno, yycolumn, $1);
+              exit(1);
+          }
+          char* t = quad_new_temp();
+          quad_emit_calln($1, $3, t);
+          free($1);
+          $$ = t;
+      }
+    | STRING
+      { $$ = imm_str($1); free($1); }
+    /* optionally also allow these */
+    | BOOL_LIT
+      {
+          if (strcmp($1, "true") == 0) $$ = xstrdup2("@1");
+          else $$ = xstrdup2("@0");
+          free($1);
+      }
+    | CHAR_LIT
+      {
+          size_t ln = strlen($1);
+          char* r = (char*)malloc(ln + 2);
+          if (!r) { perror("malloc"); exit(1); }
+          r[0] = '^';
+          memcpy(r + 1, $1, ln + 1);
+          $$ = r;
+          free($1);
       }
     ;
 

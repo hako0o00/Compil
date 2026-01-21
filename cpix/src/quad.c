@@ -69,6 +69,21 @@ void quad_emit_unop(const char* op, const char* res, const char* a) {
     quad_push(Q_UNOP, op, res, a, NULL);
 }
 
+/* new */
+void quad_emit_label(const char* name) {
+    quad_push(Q_LABEL, name, NULL, NULL, NULL);
+}
+
+void quad_emit_param(const char* operand) {
+    quad_push(Q_PARAM, operand, NULL, NULL, NULL);
+}
+
+void quad_emit_calln(const char* funcName, int argc, const char* result_or_null) {
+    char buf[32];
+    snprintf(buf, sizeof(buf), "%d", argc);
+    quad_push(Q_CALLN, funcName, buf, result_or_null, NULL);
+}
+
 char* quad_new_temp(void) {
     char buf[32];
     snprintf(buf, sizeof(buf), "t%d", temp_id++);
@@ -103,6 +118,18 @@ void quad_dump(FILE* out) {
         case Q_UNOP:
             fprintf(out, "%d: (UNOP, %s, %s, %s)\n", i, q->a1, q->a2, q->a3);
             break;
+
+        case Q_LABEL:
+            fprintf(out, "%d: (LABEL, %s)\n", i, q->a1);
+            break;
+        case Q_PARAM:
+            fprintf(out, "%d: (PARAM, %s)\n", i, q->a1);
+            break;
+        case Q_CALLN:
+            fprintf(out, "%d: (CALLN, %s, argc=%s, res=%s)\n",
+                    i, q->a1, q->a2 ? q->a2 : "0", q->a3 ? q->a3 : "_");
+            break;
+
         default:
             fprintf(out, "%d: (UNKNOWN)\n", i);
             break;

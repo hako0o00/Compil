@@ -1,0 +1,70 @@
+---- NEW RUN ----
+argc=2
+argv[0]=C:\Users\hako\Desktop\Compil\cpix\cpix.exe
+argv[1]=C:\Users\hako\Desktop\Compil\cpix\tests\hello.Cpix
+---- NEW RUN ----
+argc=2
+argv[0]=C:\Users\hako\Desktop\Compil\cpix\cpix.exe
+argv[1]=C:\Users\hako\Desktop\Compil\cpix\tests\hello.Cpix
+---- ensure_conhost_forwarding_args ----
+argc=2
+argv[0]=C:\Users\hako\Desktop\Compil\cpix\cpix.exe
+argv[1]=C:\Users\hako\Desktop\Compil\cpix\tests\hello.Cpix
+Spawn cmdline:
+"C:\Windows\System32\conhost.exe" "C:\Windows\System32\cmd.exe" /K ""C:\Users\hako\Desktop\Compil\cpix\cpix.exe" --cpix-conhost "C:\Users\hako\Desktop\Compil\cpix\tests\hello.Cpix""
+CreateProcess OK. pid=31296
+---- NEW RUN ----
+argc=3
+argv[0]=C:\Users\hako\Desktop\Compil\cpix\cpix.exe
+argv[1]=--cpix-conhost
+argv[2]=C:\Users\hako\Desktop\Compil\cpix\tests\hello.Cpix
+---- ensure_conhost_forwarding_args ----
+argc=3
+argv[0]=C:\Users\hako\Desktop\Compil\cpix\cpix.exe
+argv[1]=--cpix-conhost
+argv[2]=C:\Users\hako\Desktop\Compil\cpix\tests\hello.Cpix
+Already child mode, continue.
+---- NEW RUN ----
+argc=2
+argv[0]=C:\Users\hako\Desktop\Compil\cpix\cpix.exe
+argv[1]=C:\Users\hako\Desktop\Compil\cpix\tests\hello.Cpix
+---- ensure_conhost_forwarding_args ----
+argc=2
+argv[0]=C:\Users\hako\Desktop\Compil\cpix\cpix.exe
+argv[1]=C:\Users\hako\Desktop\Compil\cpix\tests\hello.Cpix
+Spawn cmdline:
+"C:\Windows\System32\conhost.exe" "C:\Windows\System32\cmd.exe" /K ""C:\Users\hako\Desktop\Compil\cpix\cpix.exe" --cpix-conhost "C:\Users\hako\Desktop\Compil\cpix\tests\hello.Cpix""
+CreateProcess OK. pid=3992
+---- NEW RUN ----
+argc=3
+argv[0]=C:\Users\hako\Desktop\Compil\cpix\cpix.exe
+argv[1]=--cpix-conhost
+argv[2]=C:\Users\hako\Desktop\Compil\cpix\tests\hello.Cpix
+---- ensure_conhost_forwarding_args ----
+argc=3
+argv[0]=C:\Users\hako\Desktop\Compil\cpix\cpix.exe
+argv[1]=--cpix-conhost
+argv[2]=C:\Users\hako\Desktop\Compil\cpix\tests\hello.Cpix
+Already child mode, continue.
+---- NEW RUN ----
+argc=2
+argv[0]=C:\Users\hako\Desktop\Compil\cpix\cpix.exe
+argv[1]=C:\Users\hako\Desktop\Compil\cpix\tests\hello.Cpix
+---- ensure_conhost_forwarding_args ----
+argc=2
+argv[0]=C:\Users\hako\Desktop\Compil\cpix\cpix.exe
+argv[1]=C:\Users\hako\Desktop\Compil\cpix\tests\hello.Cpix
+Spawn cmdline:
+"C:\Windows\System32\conhost.exe" "C:\Windows\System32\cmd.exe" /K ""C:\Users\hako\Desktop\Compil\cpix\cpix.exe" --cpix-conhost "C:\Users\hako\Desktop\Compil\cpix\tests\hello.Cpix""
+CreateProcess OK. pid=39272
+---- NEW RUN ----
+argc=3
+argv[0]=C:\Users\hako\Desktop\Compil\cpix\cpix.exe
+argv[1]=--cpix-conhost
+argv[2]=C:\Users\hako\Desktop\Compil\cpix\tests\hello.Cpix
+---- ensure_conhost_forwarding_args ----
+argc=3
+argv[0]=C:\Users\hako\Desktop\Compil\cpix\cpix.exe
+argv[1]=--cpix-conhost
+argv[2]=C:\Users\hako\Desktop\Compil\cpix\tests\hello.Cpix
+Already child mode, continue.

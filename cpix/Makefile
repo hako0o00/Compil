@@ -17,7 +17,8 @@ $(SRCDIR)/parser.c $(SRCDIR)/parser.tab.h: $(SRCDIR)/parser.y
 
 cpix: $(SRCDIR)/parser.c $(SRCDIR)/lexer.c
 	$(CC) $(CFLAGS) -o cpix \
-		$(SRCDIR)/main.c $(SRCDIR)/quad.c $(SRCDIR)/ConsolePix.c $(SRCDIR)/vm.c $(SRCDIR)/lexer.c $(SRCDIR)/parser.c 
+		$(SRCDIR)/main.c $(SRCDIR)/quad.c $(SRCDIR)/ConsolePix.c $(SRCDIR)/vm.c $(SRCDIR)/lexer.c $(SRCDIR)/parser.c \
+		-lgdi32
 
 run: cpix
 	./cpix tests/hello.Cpix

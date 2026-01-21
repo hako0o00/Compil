@@ -32,7 +32,8 @@ static char* xstrdup(const char* s) {
 <PREAMBLE>\xEF\xBB\xBF { yycolumn += yyleng; }
 
 <PREAMBLE>Start   { yycolumn += yyleng; BEGIN(CODE); return START; }
-<PREAMBLE>Update  { yycolumn += yyleng; return UPDATE; }
+<PREAMBLE>Update  { yycolumn += yyleng; BEGIN(CODE); return UPDATE; }
+
 
 <PREAMBLE>print   { yycolumn += yyleng; return PRINT; }
 
@@ -64,6 +65,8 @@ static char* xstrdup(const char* s) {
     return CHAR_LIT;
 }
 
+<PREAMBLE>0[xX][0-9A-Fa-f]+ { yycolumn += yyleng; yylval.s = xstrdup(yytext); return INTNUM; }
+<CODE>0[xX][0-9A-Fa-f]+     { yycolumn += yyleng; yylval.s = xstrdup(yytext); return INTNUM; }
 
 <PREAMBLE>[0-9]+\.[0-9]+ { yycolumn += yyleng; yylval.s = xstrdup(yytext); return DBLNUM; }
 <PREAMBLE>[0-9]+         { yycolumn += yyleng; yylval.s = xstrdup(yytext); return INTNUM; }
@@ -75,6 +78,7 @@ static char* xstrdup(const char* s) {
 <PREAMBLE>"/"  { yycolumn += yyleng; return SLASH; }
 <PREAMBLE>"%"  { yycolumn += yyleng; return PERCENT; }
 <PREAMBLE>"="  { yycolumn += yyleng; return ASSIGN; }
+<PREAMBLE>"," { yycolumn += yyleng; return COMMA; }
 
 <PREAMBLE>\( { yycolumn += yyleng; return LPAREN; }
 <PREAMBLE>\) { yycolumn += yyleng; return RPAREN; }
@@ -103,6 +107,10 @@ static char* xstrdup(const char* s) {
 }
 
 
+
+
+
+<CODE>","     { yycolumn += yyleng; return COMMA; }
 
 
 <CODE>Start   { yycolumn += yyleng; return START; }
