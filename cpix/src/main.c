@@ -110,8 +110,13 @@ int main(int argc, char* argv[])
     for (;;) {
         BeginFrame();
 
-        vm_run_block("UPDATE");
 
+        int rc = vm_run_block("UPDATE");
+        if (rc != 0) {
+            fprintf(stderr, "UPDATE failed\n");
+            getchar(); /* keep console open */
+            break;
+        }
         if (GetKey(VK_ESCAPE)->bPressed) break;
 
         EndFrame(1);

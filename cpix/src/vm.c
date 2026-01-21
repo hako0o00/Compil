@@ -30,6 +30,8 @@ static int env_cap = 0;
 static value_t* pstack = NULL;
 static int ptop = 0;
 static int pcap = 0;
+static int g_preamble_done = 0;
+
 
 static char* sdup(const char* s) {
     size_t n = strlen(s) + 1;
@@ -163,26 +165,189 @@ static void store_value(const char* name, value_t v) {
 }
 
 /* int-only arithmetic (matches your current parser) */
-static int binop_int(const char* op, int a, int b, int* out) {
-    if (strcmp(op, "ADD") == 0) { *out = a + b; return 1; }
-    if (strcmp(op, "SUB") == 0) { *out = a - b; return 1; }
-    if (strcmp(op, "MUL") == 0) { *out = a * b; return 1; }
-    if (strcmp(op, "DIV") == 0 || strcmp(op, "IDIV") == 0) {
-        if (b == 0) return 0;
-        *out = a / b;
+static int is_num(value_t v) {
+    return v.kind == V_INT || v.kind == V_DBL || v.kind == V_CHAR;
+}
+
+static int to_int(value_t v, int* out) {
+    if (v.kind == V_INT)  { *out = v.i; return 1; }
+    if (v.kind == V_CHAR) { *out = (unsigned char)v.c; return 1; }
+    return 0;
+}
+
+static int to_double(value_t v, double* out) {
+    if (v.kind == V_DBL)  { *out = v.d; return 1; }
+    if (v.kind == V_INT)  { *out = (double)v.i; return 1; }
+    if (v.kind == V_CHAR) { *out = (double)(unsigned char)v.c; return 1; }
+    return 0;
+}
+
+static int truthy(value_t v, int* out_bool01) {
+    if (v.kind == V_INT)  { *out_bool01 = (v.i != 0); return 1; }
+    if (v.kind == V_DBL)  { *out_bool01 = (v.d != 0.0); return 1; }
+    if (v.kind == V_CHAR) { *out_bool01 = (v.c != 0); return 1; }
+    return 0;
+}
+
+/* Return 1 on success, and write result into *out (kind can be int/dbl). */
+static int eval_arith_binop(const char* op, value_t a, value_t b, value_t* out) {
+    int ad = (a.kind == V_DBL);
+    int bd = (b.kind == V_DBL);
+
+    /* If any operand is double -> compute in double for + - * / */
+    if ((strcmp(op, "ADD") == 0) || (strcmp(op, "SUB") == 0) ||
+        (strcmp(op, "MUL") == 0) || (strcmp(op, "DIV") == 0)) {
+
+        if (!is_num(a) || !is_num(b)) return 0;
+
+        if (ad || bd) {
+            double x, y;
+            if (!to_double(a, &x) || !to_double(b, &y)) return 0;
+            if (strcmp(op, "ADD") == 0) { *out = value_dbl(x + y); return 1; }
+            if (strcmp(op, "SUB") == 0) { *out = value_dbl(x - y); return 1; }
+            if (strcmp(op, "MUL") == 0) { *out = value_dbl(x * y); return 1; }
+            if (strcmp(op, "DIV") == 0) { if (y == 0.0) return 0; *out = value_dbl(x / y); return 1; }
+        } else {
+            int x, y;
+            if (!to_int(a, &x) || !to_int(b, &y)) return 0;
+            if (strcmp(op, "ADD") == 0) { *out = value_int(x + y); return 1; }
+            if (strcmp(op, "SUB") == 0) { *out = value_int(x - y); return 1; }
+            if (strcmp(op, "MUL") == 0) { *out = value_int(x * y); return 1; }
+            if (strcmp(op, "DIV") == 0) { if (y == 0) return 0; *out = value_int(x / y); return 1; } /* keep old behavior */
+        }
+        return 0;
+    }
+
+    /* IDIV, MOD are integer-only (int/char ok) */
+    if (strcmp(op, "IDIV") == 0 || strcmp(op, "MOD") == 0) {
+        int x, y;
+        if (!to_int(a, &x) || !to_int(b, &y)) return 0;
+        if (y == 0) return 0;
+        if (strcmp(op, "IDIV") == 0) { *out = value_int(x / y); return 1; }
+        if (strcmp(op, "MOD") == 0)  { *out = value_int(x % y); return 1; }
+        return 0;
+    }
+
+    return 0;
+}
+
+/* Comparisons -> bool as int (0/1). Supports numeric+char mixes and string EQ/NE. */
+static int eval_cmp_binop(const char* op, value_t a, value_t b, value_t* out) {
+    int is_eq = (strcmp(op, "EQ") == 0);
+    int is_ne = (strcmp(op, "NE") == 0);
+
+    if (is_eq || is_ne) {
+        /* string equality supported */
+        if (a.kind == V_STR || b.kind == V_STR) {
+            if (a.kind != V_STR || b.kind != V_STR) return 0;
+            int r = (strcmp(a.s, b.s) == 0);
+            *out = value_int(is_eq ? r : !r);
+            return 1;
+        }
+
+        /* numeric/char/bool-as-int equality */
+        if (is_num(a) && is_num(b)) {
+            if (a.kind == V_DBL || b.kind == V_DBL) {
+                double x, y;
+                if (!to_double(a, &x) || !to_double(b, &y)) return 0;
+                int r = (x == y);
+                *out = value_int(is_eq ? r : !r);
+                return 1;
+            } else {
+                int x, y;
+                if (!to_int(a, &x) || !to_int(b, &y)) return 0;
+                int r = (x == y);
+                *out = value_int(is_eq ? r : !r);
+                return 1;
+            }
+        }
+        return 0;
+    }
+
+    /* LT/LE/GT/GE are numeric/char only */
+    if (!is_num(a) || !is_num(b)) return 0;
+
+    if (a.kind == V_DBL || b.kind == V_DBL) {
+        double x, y;
+        if (!to_double(a, &x) || !to_double(b, &y)) return 0;
+
+        int r = 0;
+        if (strcmp(op, "LT") == 0) r = (x <  y);
+        else if (strcmp(op, "LE") == 0) r = (x <= y);
+        else if (strcmp(op, "GT") == 0) r = (x >  y);
+        else if (strcmp(op, "GE") == 0) r = (x >= y);
+        else return 0;
+
+        *out = value_int(r);
+        return 1;
+    } else {
+        int x, y;
+        if (!to_int(a, &x) || !to_int(b, &y)) return 0;
+
+        int r = 0;
+        if (strcmp(op, "LT") == 0) r = (x <  y);
+        else if (strcmp(op, "LE") == 0) r = (x <= y);
+        else if (strcmp(op, "GT") == 0) r = (x >  y);
+        else if (strcmp(op, "GE") == 0) r = (x >= y);
+        else return 0;
+
+        *out = value_int(r);
         return 1;
     }
-    if (strcmp(op, "MOD") == 0) {
-        if (b == 0) return 0;
-        *out = a % b;
-        return 1;
-    }
+}
+
+/* Boolean logic -> bool as int (0/1). Treats numeric/char as truthy. */
+static int eval_logic_binop(const char* op, value_t a, value_t b, value_t* out) {
+    int x, y;
+    if (!truthy(a, &x) || !truthy(b, &y)) return 0;
+
+    if (strcmp(op, "AND") == 0) { *out = value_int((x && y) ? 1 : 0); return 1; }
+    if (strcmp(op, "OR")  == 0) { *out = value_int((x || y) ? 1 : 0); return 1; }
     return 0;
 }
 
 /* ---------------- Native functions (minimal set) ---------------- */
 
 typedef value_t (*native_fn_t)(value_t* args, int argc);
+
+static int run_preamble_once(void) {
+    if (g_preamble_done) return 0;
+    g_preamble_done = 1;
+
+    int count = quad_count();
+    for (int i = 0; i < count; i++) {
+        quad_t* q = quad_at(i);
+        if (!q) continue;
+
+        /* stop when first block starts */
+        if (q->op == Q_LABEL && q->a1 &&
+            (strcmp(q->a1, "START") == 0 || strcmp(q->a1, "UPDATE") == 0)) {
+            break;
+        }
+
+        /* only allow safe preamble ops */
+        if (q->op == Q_DECL) {
+            env_ensure(q->a1);
+        }
+        else if (q->op == Q_ASSIGN) {
+            value_t rhs = eval_operand(q->a2);
+            if (rhs.kind == V_UNDEF) {
+                fprintf(stderr, "runtime error: undefined value in global ASSIGN (%s = %s)\n",
+                        q->a1, q->a2);
+                return 1;
+            }
+            store_value(q->a1, rhs);
+        }
+        else if (q->op == Q_PRINT || q->op == Q_BINOP || q->op == Q_UNOP ||
+                 q->op == Q_PARAM || q->op == Q_CALLN || q->op == Q_JMP || q->op == Q_JZ) {
+            fprintf(stderr, "runtime error: invalid instruction in global preamble\n");
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
 
 typedef struct {
     const char* name;
@@ -287,7 +452,11 @@ static value_t ppop(void) {
 
 void vm_init(void) {
     /* keep env between frames; just reset param stack */
-    ptop = 0;
+     ptop = 0;
+
+    if (run_preamble_once() != 0) {
+        /* if you want: exit(1); */
+    }
 }
 
 static int find_label_pc(const char* label) {
@@ -313,10 +482,16 @@ int vm_run_block(const char* label) {
     for (int i = pc; i < count; i++) {
         quad_t* q = quad_at(i);
         if (!q) continue;
+        /* stop only at top-level block boundaries */
+        if (q->op == Q_LABEL && q->a1 &&
+            (strcmp(q->a1, "START") == 0 || strcmp(q->a1, "UPDATE") == 0)) {
+            break;
+        }
 
-        /* stop at next label => this block ends */
-        if (q->op == Q_LABEL) break;
-
+        /* internal labels are normal; just skip them */
+        if (q->op == Q_LABEL) {
+            continue;
+        }
         switch (q->op) {
         case Q_DECL: {
             env_ensure(q->a1);
@@ -350,42 +525,87 @@ int vm_run_block(const char* label) {
 
         case Q_UNOP: {
             value_t a = eval_operand(q->a3);
-            if (a.kind != V_INT) {
-                fprintf(stderr, "runtime error: UNOP expects int\n");
-                value_free(&a);
+            if (a.kind == V_UNDEF) {
+                fprintf(stderr, "runtime error: undefined value in UNOP (%s)\n", q->a3);
                 return 1;
             }
+
             if (strcmp(q->a1, "NEG") == 0) {
-                store_value(q->a2, value_int(-a.i));
-            } else {
+                if (a.kind == V_DBL) {
+                    store_value(q->a2, value_dbl(-a.d));
+                } else if (a.kind == V_INT) {
+                    store_value(q->a2, value_int(-a.i));
+                } else if (a.kind == V_CHAR) {
+                    store_value(q->a2, value_int(-(int)(unsigned char)a.c));
+                } else {
+                    fprintf(stderr, "runtime error: NEG expects numeric (int/double/char)\n");
+                    value_free(&a);
+                    return 1;
+                }
+            }
+            else if (strcmp(q->a1, "NOT") == 0) {
+                int x = 0;
+                if (!truthy(a, &x)) {
+                    fprintf(stderr, "runtime error: NOT expects numeric/bool/char\n");
+                    value_free(&a);
+                    return 1;
+                }
+                store_value(q->a2, value_int(x ? 0 : 1));
+            }
+            else {
                 fprintf(stderr, "runtime error: unknown UNOP %s\n", q->a1);
                 value_free(&a);
                 return 1;
             }
+
             value_free(&a);
             break;
         }
 
+
         case Q_BINOP: {
             value_t a = eval_operand(q->a3);
             value_t b = eval_operand(q->a4);
-            if (a.kind != V_INT || b.kind != V_INT) {
-                fprintf(stderr, "runtime error: BINOP expects ints\n");
+
+            if (a.kind == V_UNDEF || b.kind == V_UNDEF) {
+                fprintf(stderr, "runtime error: undefined value in BINOP (%s %s %s)\n",
+                        q->a3, q->a1, q->a4);
                 value_free(&a);
                 value_free(&b);
                 return 1;
             }
-            int r = 0;
-            if (!binop_int(q->a1, a.i, b.i, &r)) {
-                fprintf(stderr, "runtime error: invalid BINOP (%s) or division by zero\n", q->a1);
+
+            value_t r = {0};
+            r.kind = V_UNDEF;
+
+            /* arithmetic */
+            if (eval_arith_binop(q->a1, a, b, &r)) {
+                store_value(q->a2, r);
                 value_free(&a);
                 value_free(&b);
-                return 1;
+                break;
             }
-            store_value(q->a2, value_int(r));
+
+            /* comparisons */
+            if (eval_cmp_binop(q->a1, a, b, &r)) {
+                store_value(q->a2, r); /* bool as int */
+                value_free(&a);
+                value_free(&b);
+                break;
+            }
+
+            /* logic */
+            if (eval_logic_binop(q->a1, a, b, &r)) {
+                store_value(q->a2, r); /* bool as int */
+                value_free(&a);
+                value_free(&b);
+                break;
+            }
+
+            fprintf(stderr, "runtime error: invalid BINOP (%s) for operand kinds\n", q->a1);
             value_free(&a);
             value_free(&b);
-            break;
+            return 1;
         }
 
         case Q_PARAM: {
@@ -442,6 +662,40 @@ int vm_run_block(const char* label) {
                 store_value(q->a3, ret);
             } else {
                 value_free(&ret);
+            }
+            break;
+        }
+        case Q_JMP: {
+            int npc = find_label_pc(q->a1);
+            if (npc < 0) {
+                fprintf(stderr, "runtime error: JMP to unknown label '%s'\n", q->a1);
+                return 1;
+            }
+            i = npc - 1; /* because loop increments i */
+            break;
+        }
+        case Q_JZ: {
+            value_t c = eval_operand(q->a1);
+            if (c.kind == V_UNDEF) {
+                fprintf(stderr, "runtime error: undefined condition in JZ (%s)\n", q->a1);
+                value_free(&c);
+                return 1;
+            }
+            int t = 0;
+            if (!truthy(c, &t)) {
+                fprintf(stderr, "runtime error: invalid condition type in JZ\n");
+                value_free(&c);
+                return 1;
+            }
+            value_free(&c);
+
+            if (t == 0) { /* false => jump */
+                int npc = find_label_pc(q->a2);
+                if (npc < 0) {
+                    fprintf(stderr, "runtime error: JZ to unknown label '%s'\n", q->a2);
+                    return 1;
+                }
+                i = npc - 1;
             }
             break;
         }

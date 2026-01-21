@@ -9,6 +9,9 @@ extern const char* g_filename;
 
 int yycolumn = 1;
 
+enum { CST_PREAMBLE = 1, CST_CODE = 2 };
+static int comment_prev_state = CST_PREAMBLE;
+
 static char* xstrdup(const char* s) {
     size_t n = strlen(s) + 1;
     char* p = (char*)malloc(n);
@@ -21,7 +24,7 @@ static char* xstrdup(const char* s) {
 %option noyywrap
 %option yylineno
 
-%x PREAMBLE CODE
+%x PREAMBLE CODE COMMENT
 
 %{
 #define YY_USER_INIT do { yycolumn = 1; BEGIN(PREAMBLE); } while(0)
@@ -33,6 +36,7 @@ static char* xstrdup(const char* s) {
 
 <PREAMBLE>Start   { yycolumn += yyleng; BEGIN(CODE); return START; }
 <PREAMBLE>Update  { yycolumn += yyleng; BEGIN(CODE); return UPDATE; }
+<PREAMBLE>^[ \t]*#[^\r\n]*   { yycolumn += yyleng; }
 
 
 <PREAMBLE>print   { yycolumn += yyleng; return PRINT; }
@@ -65,8 +69,27 @@ static char* xstrdup(const char* s) {
     return CHAR_LIT;
 }
 
+<PREAMBLE>"&&" { yycolumn += yyleng; return AND; }
+<PREAMBLE>"||" { yycolumn += yyleng; return OR;  }
+<PREAMBLE>"!"  { yycolumn += yyleng; return NOT; }
+
+<PREAMBLE>"AND"|"and" { yycolumn += yyleng; return AND; }
+<PREAMBLE>"OR"|"or"   { yycolumn += yyleng; return OR;  }
+<PREAMBLE>"NOT"|"not" { yycolumn += yyleng; return NOT; }
+
+<PREAMBLE>"while" { yycolumn += yyleng; return WHILE; }
+<PREAMBLE>"for"   { yycolumn += yyleng; return FOR; }
+
+<PREAMBLE>"==" { yycolumn += yyleng; return EQ; }
+<PREAMBLE>"!=" { yycolumn += yyleng; return NE; }
+<PREAMBLE>"<=" { yycolumn += yyleng; return LE; }
+<PREAMBLE>">=" { yycolumn += yyleng; return GE; }
+<PREAMBLE>"<"  { yycolumn += yyleng; return LT; }
+<PREAMBLE>">"  { yycolumn += yyleng; return GT; }
+<PREAMBLE>";" { yycolumn += yyleng; return SEMI; }
 <PREAMBLE>0[xX][0-9A-Fa-f]+ { yycolumn += yyleng; yylval.s = xstrdup(yytext); return INTNUM; }
-<CODE>0[xX][0-9A-Fa-f]+     { yycolumn += yyleng; yylval.s = xstrdup(yytext); return INTNUM; }
+
+<PREAMBLE>"/*" { yycolumn += yyleng; comment_prev_state = CST_PREAMBLE; BEGIN(COMMENT); }
 
 <PREAMBLE>[0-9]+\.[0-9]+ { yycolumn += yyleng; yylval.s = xstrdup(yytext); return DBLNUM; }
 <PREAMBLE>[0-9]+         { yycolumn += yyleng; yylval.s = xstrdup(yytext); return INTNUM; }
@@ -79,6 +102,8 @@ static char* xstrdup(const char* s) {
 <PREAMBLE>"%"  { yycolumn += yyleng; return PERCENT; }
 <PREAMBLE>"="  { yycolumn += yyleng; return ASSIGN; }
 <PREAMBLE>"," { yycolumn += yyleng; return COMMA; }
+
+
 
 <PREAMBLE>\( { yycolumn += yyleng; return LPAREN; }
 <PREAMBLE>\) { yycolumn += yyleng; return RPAREN; }
@@ -112,7 +137,7 @@ static char* xstrdup(const char* s) {
 
 <CODE>","     { yycolumn += yyleng; return COMMA; }
 
-
+<CODE>^[ \t]*#[^\r\n]*       { yycolumn += yyleng; }
 <CODE>Start   { yycolumn += yyleng; return START; }
 <CODE>Update  { yycolumn += yyleng; return UPDATE; }
 
@@ -146,8 +171,23 @@ static char* xstrdup(const char* s) {
     return CHAR_LIT;
 }
 
+<CODE>"&&" { yycolumn += yyleng; return AND; }
+<CODE>"||" { yycolumn += yyleng; return OR;  }
+<CODE>"!"  { yycolumn += yyleng; return NOT; }
+
+<CODE>"AND"|"and" { yycolumn += yyleng; return AND; }
+<CODE>"OR"|"or"   { yycolumn += yyleng; return OR;  }
+<CODE>"NOT"|"not" { yycolumn += yyleng; return NOT; }
+
+<CODE>"==" { yycolumn += yyleng; return EQ; }
+<CODE>"!=" { yycolumn += yyleng; return NE; }
+<CODE>"<=" { yycolumn += yyleng; return LE; }
+<CODE>">=" { yycolumn += yyleng; return GE; }
+<CODE>"<"  { yycolumn += yyleng; return LT; }
+<CODE>">"  { yycolumn += yyleng; return GT; }
 <CODE>[0-9]+\.[0-9]+ { yycolumn += yyleng; yylval.s = xstrdup(yytext); return DBLNUM; }
 <CODE>[0-9]+         { yycolumn += yyleng; yylval.s = xstrdup(yytext); return INTNUM; }
+<CODE>0[xX][0-9A-Fa-f]+     { yycolumn += yyleng; yylval.s = xstrdup(yytext); return INTNUM; }
 
 <CODE>"//" { yycolumn += yyleng; return IDIV; }
 <CODE>"+"  { yycolumn += yyleng; return PLUS; }
@@ -156,6 +196,16 @@ static char* xstrdup(const char* s) {
 <CODE>"/"  { yycolumn += yyleng; return SLASH; }
 <CODE>"%"  { yycolumn += yyleng; return PERCENT; }
 <CODE>"="  { yycolumn += yyleng; return ASSIGN; }
+<CODE>";"     { yycolumn += yyleng; return SEMI; }
+
+<CODE>"/*"     { yycolumn += yyleng; comment_prev_state = CST_CODE;     BEGIN(COMMENT); }
+
+<CODE>"if"    { yycolumn += yyleng; return IF; }
+<CODE>"else"  { yycolumn += yyleng; return ELSE; }
+
+
+<CODE>"while" { yycolumn += yyleng; return WHILE; }
+<CODE>"for"   { yycolumn += yyleng; return FOR; }
 
 <CODE>\( { yycolumn += yyleng; return LPAREN; }
 <CODE>\) { yycolumn += yyleng; return RPAREN; }
@@ -182,5 +232,23 @@ static char* xstrdup(const char* s) {
             g_filename, yylineno, yycolumn);
     exit(1);
 }
+
+
+<COMMENT>"*/"  {
+    yycolumn += yyleng;
+    if (comment_prev_state == CST_PREAMBLE) BEGIN(PREAMBLE);
+    else BEGIN(CODE);
+}
+
+<COMMENT>\r\n  { yycolumn = 1; }
+<COMMENT>\n    { yycolumn = 1; }
+<COMMENT>.     { yycolumn += yyleng; }
+
+<COMMENT><<EOF>> {
+    fprintf(stderr, "File \"%s\", line %d, character %d: unterminated comment block\n",
+            g_filename, yylineno, yycolumn);
+    exit(1);
+}
+
 
 %%

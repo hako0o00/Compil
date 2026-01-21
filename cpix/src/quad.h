@@ -9,11 +9,11 @@ typedef enum {
     Q_PRINT,
     Q_BINOP,
     Q_UNOP,
-
-    /* new: block structure + native calls */
-    Q_LABEL,   /* (LABEL, name) */
-    Q_PARAM,   /* (PARAM, operand) */
-    Q_CALLN    /* (CALLN, funcName, argc, resultOrNull) */
+    Q_LABEL,  
+    Q_PARAM,  
+    Q_CALLN,  
+    Q_JMP,
+    Q_JZ
 } quad_op_t;
 
 typedef struct {
@@ -37,7 +37,11 @@ void quad_emit_unop(const char* op, const char* res, const char* a);
 void quad_emit_label(const char* name);
 void quad_emit_param(const char* operand);
 void quad_emit_calln(const char* funcName, int argc, const char* result_or_null);
+void quad_emit_jmp(const char* label);
+void quad_emit_jz(const char* cond, const char* label);
 
+/* label factory */
+char* quad_new_label(void);
 char* quad_new_temp(void);
 
 int quad_count(void);

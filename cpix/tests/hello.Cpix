@@ -1,14 +1,24 @@
-int x = 20
-int y = 20
+int x = 0
+int y = 0
+int run = 1
+Start {
 
-Start{
-		
 }
+#this is a comment
+/* this is a block
 
-Update{
-  Fill(10,10,120,120,0x0011)
-  FillCircle(30,30,20,0x00FF)
-  x = GetMouseX()
-  y = GetMouseY()
-  FillCircle(x,y,20,0x0044)
+
+
+
+
+sjfhjsfh
+sfnksjf
+sfjlskjf*/
+Update {
+
+	while(y<5){
+	FillCircle(10,y*50,20,0x0044)
+	y=y+1
+	}
+	FillCircle(30,10,20,0x0011)
 }

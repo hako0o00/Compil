@@ -70,20 +70,34 @@ extern int yydebug;
     RBRACKET = 271,                /* RBRACKET  */
     ASSIGN = 272,                  /* ASSIGN  */
     COMMA = 273,                   /* COMMA  */
-    TYPE_INT = 274,                /* TYPE_INT  */
-    TYPE_DOUBLE = 275,             /* TYPE_DOUBLE  */
-    TYPE_BOOL = 276,               /* TYPE_BOOL  */
-    TYPE_CHAR = 277,               /* TYPE_CHAR  */
-    TYPE_STRING = 278,             /* TYPE_STRING  */
-    PLUS = 279,                    /* PLUS  */
-    MINUS = 280,                   /* MINUS  */
-    STAR = 281,                    /* STAR  */
-    SLASH = 282,                   /* SLASH  */
-    PERCENT = 283,                 /* PERCENT  */
-    IDIV = 284,                    /* IDIV  */
-    LPAREN = 285,                  /* LPAREN  */
-    RPAREN = 286,                  /* RPAREN  */
-    UMINUS = 287                   /* UMINUS  */
+    SEMI = 274,                    /* SEMI  */
+    TYPE_INT = 275,                /* TYPE_INT  */
+    TYPE_DOUBLE = 276,             /* TYPE_DOUBLE  */
+    TYPE_BOOL = 277,               /* TYPE_BOOL  */
+    TYPE_CHAR = 278,               /* TYPE_CHAR  */
+    TYPE_STRING = 279,             /* TYPE_STRING  */
+    PLUS = 280,                    /* PLUS  */
+    MINUS = 281,                   /* MINUS  */
+    STAR = 282,                    /* STAR  */
+    SLASH = 283,                   /* SLASH  */
+    PERCENT = 284,                 /* PERCENT  */
+    IDIV = 285,                    /* IDIV  */
+    LPAREN = 286,                  /* LPAREN  */
+    RPAREN = 287,                  /* RPAREN  */
+    WHILE = 288,                   /* WHILE  */
+    FOR = 289,                     /* FOR  */
+    AND = 290,                     /* AND  */
+    OR = 291,                      /* OR  */
+    NOT = 292,                     /* NOT  */
+    EQ = 293,                      /* EQ  */
+    NE = 294,                      /* NE  */
+    LT = 295,                      /* LT  */
+    LE = 296,                      /* LE  */
+    GT = 297,                      /* GT  */
+    GE = 298,                      /* GE  */
+    IF = 299,                      /* IF  */
+    ELSE = 300,                    /* ELSE  */
+    UMINUS = 301                   /* UMINUS  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -92,10 +106,10 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 56 "src/parser.y"
+#line 150 "src/parser.y"
  char* s; int i; 
 
-#line 99 "src/parser.tab.h"
+#line 113 "src/parser.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;
