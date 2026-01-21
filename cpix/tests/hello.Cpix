@@ -24,7 +24,7 @@ double t = 0.0
 
 Start {
   # Simple splash / init drawing
-  Fill(0,0,400,400,0x0000)
+  Fill(0,0,400,400,0x0014)
   WriteStringScaled(10,10,0x00FF,2,"CPix test starting...")
   WriteStringScaled(10,40,0x00FF,1,"grid=" + grid + " r=" + r)
 }
@@ -36,8 +36,10 @@ Update {
   # ------------------------------------------------------------
   mx = GetMouseX()
   my = GetMouseY()
+  if((mx < 50) && (my<50)){
 
-  # ------------------------------------------------------------
+} else {
+	# ------------------------------------------------------------
   # 2) Background color changes over time (very simple)
   #    (we just alternate based on frame parity)
   # ------------------------------------------------------------
@@ -102,4 +104,6 @@ while(i < 10){
   # 7) Update frame
   # ------------------------------------------------------------
   frame = frame + 1
+}
+  
 }
